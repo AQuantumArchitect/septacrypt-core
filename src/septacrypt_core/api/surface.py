@@ -14,12 +14,9 @@ import numpy as np
 
 from umwelt.host.api import GameHost
 
-from ..scenario.reactor import ROLES, build_entangled_reactor
+from ..scenario.reactor import build_entangled_reactor
 from ..narrative.lexicon import LoreLexicon
 from ..geometry.atlas import bloch_to_septacrypt
-
-# Matches geometry/atlas.py's axis convention: father, son, spirit.
-_AXIS_ROLE_ORDER = ("valve_17", "coolant_pump", "temp_sensor")
 
 
 class FledgelingKernelAPI:
@@ -28,11 +25,14 @@ class FledgelingKernelAPI:
     Provides raw quantum metrics for procedural shaders (Godot/Blender)
     and semantic lore for UI/Dialogue rendering.
     """
-    def __init__(self, host: GameHost, domain_cluster_name: str = "Repair_Station"):
+    def __init__(self, host: GameHost, domain_cluster_name: str = "Repair_Station", cluster=None):
+        """`cluster`: an already-built CumulantCluster (e.g. one zone of a
+        multi-zone manifold). Defaults to the single-reactor scenario if not
+        given, for backward compatibility with the Phase 12/13 proofs."""
         self.host = host
         self.cluster_name = domain_cluster_name
         self.story_log: List[str] = []
-        self.cluster = build_entangled_reactor()
+        self.cluster = cluster if cluster is not None else build_entangled_reactor()
 
     def get_cluster(self):
         return self.cluster
@@ -57,7 +57,12 @@ class FledgelingKernelAPI:
         return round(tension, 5)
 
     def _current_q3_mask(self, cluster) -> int:
-        bloch_vecs = [cluster.role_bloch(role) for role in _AXIS_ROLE_ORDER]
+        """cluster.qubit_roles is already in (father, son, spirit) / (structure,
+        energy, information) order by construction for every zone we build
+        (see scenario/reactor.py and scenario/manifold_ship.py) -- using the
+        cluster's own role order generalizes this beyond the single hardcoded
+        Repair_Station role names, so it also works for manifold zones."""
+        bloch_vecs = [cluster.role_bloch(role) for role in cluster.qubit_roles]
         return bloch_to_septacrypt(bloch_vecs)
 
     def fetch_render_state(self, observer_id: str) -> Dict[str, Any]:
