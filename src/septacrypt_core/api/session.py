@@ -63,29 +63,51 @@ class GameSession:
         attention_budget: Optional[float] = DEFAULT_ATTENTION,
         apply_bridges: bool = True,
         include_ground_debug: bool = False,
+        spec: Optional[Any] = None,
     ):
-        if mode not in ("reactor", "ship"):
-            raise ValueError("mode must be 'reactor' or 'ship'")
-        self.mode = mode
+        """`spec` (a septacrypt_core.spec.WorldSpec, or a "module:ATTR" ref
+        string) builds a data-driven world; `mode` is then ignored and the
+        session's mode label becomes the spec_id. Without `spec`, the builtin
+        reactor/ship scenarios are used, exactly as before."""
+        if spec is not None:
+            if isinstance(spec, str):
+                from ..spec.load import load_spec
+
+                spec = load_spec(spec)
+            self.mode = spec.spec_id
+        else:
+            if mode not in ("reactor", "ship"):
+                raise ValueError("mode must be 'reactor' or 'ship'")
+            self.mode = mode
         self.seed = seed
         self.enable_ledger = enable_ledger
         self.private_observers = private_observers
+        # Spec-declared attention applies when the caller left the default.
+        if spec is not None and spec.attention is not None and attention_budget == DEFAULT_ATTENTION:
+            attention_budget = spec.attention
         self.attention_budget = attention_budget
         self.include_ground_debug = include_ground_debug
         self.dynamics_version = DYNAMICS_VERSION
 
-        if mode == "reactor":
+        if spec is not None:
+            bridges_on = apply_bridges and bool(spec.bridges)
+            self.world = World.from_spec(spec, seed=seed, bridges_enabled=bridges_on)
+            self._bridges = bridges_on
+            quests = [(q.zone, q.target_mask) for q in spec.quests]
+        elif mode == "reactor":
             self.world = World.reactor(seed=seed)
             self._bridges = False
+            quests = []
         else:
             self.world = World.ship(seed=seed, bridges_enabled=apply_bridges)
             self._bridges = apply_bridges
+            quests = None  # CampaignController default = DEFAULT_QUESTS
 
         self.ledger = KnotLedger() if enable_ledger else None
         self._branch = "main"
         self.beliefs = ObserverBeliefStore()
         self.narrative = NarrativeProjector()
-        self.campaign = CampaignController() if mode == "ship" else CampaignController(quests=[])
+        self.campaign = CampaignController(quests=quests) if quests is not None else CampaignController()
         self.stepper = WorldStepper()
 
         if self.ledger:

@@ -92,6 +92,8 @@ class World:
         berry: Optional[Dict[str, BerryJourney]] = None,
         active_zone: Optional[str] = None,
         routines: Optional[Dict[str, Dict[str, Any]]] = None,
+        bridge_list: Optional[List[tuple]] = None,
+        spec: Optional[Any] = None,
     ):
         self.zones = zones
         self.topology_version = topology_version
@@ -99,6 +101,11 @@ class World:
         self.turn = turn
         self.rng = rng if rng is not None else random.Random(seed)
         self.seed = seed
+        # Which cross-zone couplings a "bridges" event applies. None means the
+        # legacy builtin table (CROSS_ZONE_BRIDGES); spec-built worlds carry
+        # their own.
+        self.bridge_list: Optional[List[tuple]] = bridge_list
+        self.spec = spec  # WorldSpec for spec-built worlds (clone dispatch)
         self.berry: Dict[str, BerryJourney] = berry if berry is not None else {}
         for name, cluster in self.zones.items():
             if name not in self.berry:
@@ -129,6 +136,39 @@ class World:
             seed=seed,
             bridges_enabled=bridges_enabled,
             active_zone="Reactor_Core",
+        )
+
+    @classmethod
+    def from_spec(cls, spec: Any, seed: Optional[int] = None, bridges_enabled: Optional[bool] = None) -> "World":
+        """Build a world from a WorldSpec (septacrypt_core.spec.types)."""
+        from umwelt.substrate.cumulant_cluster import CumulantCluster
+
+        errors = spec.validate()
+        if errors:
+            raise ValueError(f"invalid WorldSpec {spec.spec_id!r}: " + "; ".join(errors))
+        zones: Dict[str, Any] = {}
+        for z in spec.zones:
+            cluster = CumulantCluster(
+                zone_name=z.name,
+                qubit_roles=list(z.roles),
+                gamma=z.gamma,
+                dt=z.dt,
+            )
+            cluster.set_couplings(
+                h_fields=[list(row) for row in z.h_fields],
+                zz={(i, j): v for (i, j), v in z.zz},
+            )
+            zones[z.name] = cluster
+        if bridges_enabled is None:
+            bridges_enabled = bool(spec.bridges)
+        return cls(
+            zones,
+            topology_version=spec.topology_version,
+            seed=seed,
+            bridges_enabled=bridges_enabled,
+            active_zone=spec.zones[0].name,
+            bridge_list=spec.bridge_tuples(),
+            spec=spec,
         )
 
     @property
@@ -186,7 +226,9 @@ class World:
     def clone(self) -> "World":
         """Isolated working copy with identical physics state."""
         snap = self.snapshot()
-        if self.topology_version == TOPOLOGY_REACTOR:
+        if self.spec is not None:
+            w = World.from_spec(self.spec, seed=self.seed, bridges_enabled=self.bridges_enabled)
+        elif self.topology_version == TOPOLOGY_REACTOR:
             w = World.reactor(seed=self.seed)
         else:
             w = World.ship(seed=self.seed, bridges_enabled=self.bridges_enabled)
@@ -257,7 +299,8 @@ class World:
 
         elif kind == "bridges":
             if self.bridges_enabled:
-                apply_cross_zone_bridges(self.zones, list(CROSS_ZONE_BRIDGES))
+                bridges = self.bridge_list if self.bridge_list is not None else list(CROSS_ZONE_BRIDGES)
+                apply_cross_zone_bridges(self.zones, bridges)
 
         elif kind == "report":
             # Epistemic only — no substrate mutation (handled by ObserverBeliefStore)
