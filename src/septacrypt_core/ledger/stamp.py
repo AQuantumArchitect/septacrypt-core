@@ -15,7 +15,11 @@ class EntityRef:
 
 
 @dataclass(frozen=True)
-class Observation:
+class KnotObservation:
+    """Ledger-side observation record. Renamed from `Observation` (ADR-001):
+    umwelt.host owns the plain belief-face names (Observation, Intent,
+    GameHost, WorldSession); septacrypt-core's ledger vocabulary is Knot-*."""
+
     observer_id: str
     source_id: str
     target: EntityRef
@@ -27,13 +31,31 @@ class Observation:
 
 
 @dataclass(frozen=True)
-class Intent:
+class KnotIntent:
+    """Ledger-side intent record. Renamed from `Intent` (ADR-001)."""
+
     actor_id: str
     target: EntityRef
     action_type: str
     parameters: Dict[str, Any]
     spirit_gradient: Optional[SpiritVector]
     shadow: bool = True
+
+
+def __getattr__(name: str):
+    # Deprecation aliases for one release (ADR-001 name hygiene).
+    if name in ("Observation", "Intent"):
+        import warnings
+
+        new = {"Observation": KnotObservation, "Intent": KnotIntent}[name]
+        warnings.warn(
+            f"septacrypt_core.ledger.stamp.{name} is deprecated; use {new.__name__} "
+            "(umwelt.host owns the plain belief-face names — see ADR-001)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return new
+    raise AttributeError(name)
 
 
 @dataclass(frozen=True)
