@@ -74,6 +74,30 @@ def test_validator_rejects_bad_init_bloch():
     assert ok.validate() == []
 
 
+def test_role_modes_unitary_holds_pole():
+    """A unitary role holds its collapsed pole; the dissipative default
+    thermalizes toward the mixed state within ~2 time units."""
+    base = _zone(init_bloch=((0.0, 0.0, 0.9),) * 3)
+    unitary = dataclasses.replace(base, role_modes=("unitary",) * 3)
+    for zone, persists in ((base, False), (unitary, True)):
+        spec = dataclasses.replace(_spec(), zones=(zone,))
+        assert spec.validate() == []
+        w = World.from_spec(spec, seed=1)
+        for _ in range(30):
+            w.zones["Nursery"].step(dt_scale=1.0)
+        z = float(w.zones["Nursery"].e1[0, 2])
+        assert (abs(z) > 0.5) == persists, f"z={z} persists={persists}"
+
+
+def test_validator_rejects_bad_role_modes():
+    bad_count = dataclasses.replace(_zone(), role_modes=("unitary",))
+    spec = dataclasses.replace(_spec(), zones=(bad_count,))
+    assert any("one entry per role" in e for e in spec.validate())
+    bad_value = dataclasses.replace(_zone(), role_modes=("unitary", "magic", "unitary"))
+    spec = dataclasses.replace(_spec(), zones=(bad_value,))
+    assert any("'unitary' or 'dissipative'" in e for e in spec.validate())
+
+
 def test_seeded_determinism_with_init_bloch():
     hashes = []
     for _ in range(2):

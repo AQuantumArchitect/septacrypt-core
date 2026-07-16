@@ -31,6 +31,11 @@ class ZoneSpec:
     # None keeps the substrate default (ground pole). Never consulted on
     # clone/restore — snapshots always win.
     init_bloch: Optional[Tuple[Tuple[float, float, float], ...]] = None
+    # Optional per-role input mode ("unitary" | "dissipative"), one per role.
+    # None keeps the substrate's name-based default (unknown roles are
+    # dissipative: fast thermalization toward the mixed state). Structural —
+    # carried by the spec so certified-path clones rebuild identically.
+    role_modes: Optional[Tuple[str, ...]] = None
 
 
 @dataclass(frozen=True)
@@ -95,6 +100,16 @@ class WorldSpec:
                     if sum(c * c for c in row) > 1.0 + 1e-9:
                         errors.append(
                             f"zone {z.name!r}: init_bloch row {row} outside the Bloch ball"
+                        )
+                        break
+            if z.role_modes is not None:
+                if len(z.role_modes) != n:
+                    errors.append(f"zone {z.name!r}: role_modes must have one entry per role")
+                for mode in z.role_modes:
+                    if mode not in ("unitary", "dissipative"):
+                        errors.append(
+                            f"zone {z.name!r}: role_modes entries must be "
+                            f"'unitary' or 'dissipative', got {mode!r}"
                         )
                         break
             if z.gamma < 0:

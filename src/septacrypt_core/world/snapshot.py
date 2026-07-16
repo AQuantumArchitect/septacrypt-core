@@ -148,11 +148,15 @@ class World:
             raise ValueError(f"invalid WorldSpec {spec.spec_id!r}: " + "; ".join(errors))
         zones: Dict[str, Any] = {}
         for z in spec.zones:
+            role_modes = getattr(z, "role_modes", None)
             cluster = CumulantCluster(
                 zone_name=z.name,
                 qubit_roles=list(z.roles),
                 gamma=z.gamma,
                 dt=z.dt,
+                role_modes=(
+                    dict(zip(z.roles, role_modes)) if role_modes is not None else None
+                ),
             )
             cluster.set_couplings(
                 h_fields=[list(row) for row in z.h_fields],
