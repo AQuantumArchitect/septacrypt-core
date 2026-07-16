@@ -3,7 +3,8 @@ from typing import Dict, Optional
 from ..api.surface import FledgelingKernelAPI
 from ..geometry.atlas import bloch_to_septacrypt
 from ..narrative.lexicon import LoreLexicon
-from .manifold_ship import build_ship_manifold
+from .manifold_ship import apply_cross_zone_bridges, build_ship_manifold
+from .params import DEFAULT_ATTENTION, DEFAULT_QUESTS
 
 
 class Quest:
@@ -21,18 +22,21 @@ class Quest:
 
 class CampaignManager:
     """Manages the SpaceWeave run across the Manifold Ship."""
-    def __init__(self, host, zone_clusters: Optional[Dict] = None):
+
+    def __init__(self, host, zone_clusters: Optional[Dict] = None, *, seed: Optional[int] = None):
         zone_clusters = zone_clusters if zone_clusters is not None else build_ship_manifold()
+        self.zone_clusters = zone_clusters
         self.api_instances = {
-            zone: FledgelingKernelAPI(host, domain_cluster_name=zone, cluster=cluster)
+            zone: FledgelingKernelAPI(
+                host, domain_cluster_name=zone, cluster=cluster, seed=seed, enable_ledger=False
+            )
             for zone, cluster in zone_clusters.items()
         }
-        self.attention_budget = 50.0
-        self.quests = [
-            Quest("Reactor_Core", 0b011),  # Power
-            Quest("Navigation", 0b101),    # Glory
-            Quest("Life_Support", 0b110),  # Honor
-        ]
+        self.attention_budget = DEFAULT_ATTENTION
+        self.quests = [Quest(z, m) for z, m in DEFAULT_QUESTS]
+
+    def apply_bridges(self) -> None:
+        apply_cross_zone_bridges(self.zone_clusters)
 
     def check_victory(self) -> bool:
         return all(q.is_complete(self.api_instances[q.zone]) for q in self.quests)

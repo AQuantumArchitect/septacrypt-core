@@ -32,12 +32,14 @@ class QuantumState3Qubit:
         """
         return [self.matrix[i][i].real for i in range(8)]
 
-    def is_gauge_equivalent(self, other: 'QuantumState3Qubit', tolerance: float = 1e-6) -> bool:
+    def populations_and_coherence_magnitudes_match(
+        self, other: "QuantumState3Qubit", tolerance: float = 1e-6
+    ) -> bool:
         """
-        Gauge-Invariant Comparison: Two density matrices represent the same observable state
-        modulo local phase rotations if:
-          1. Their diagonal populations are equal.
-          2. The absolute magnitudes of their off-diagonal coherences are equal.
+        Necessary (not always sufficient) check: equal diagonal populations and equal
+        off-diagonal coherence *magnitudes*. This is weaker than true local-phase
+        gauge equivalence (rho' = U_local rho U_local^H); different phase-loop
+        structures can share magnitudes without being related by local unitaries.
         """
         for i in range(8):
             for j in range(8):
@@ -50,6 +52,11 @@ class QuantumState3Qubit:
                     if abs(abs(val_self) - abs(val_other)) > tolerance:
                         return False
         return True
+
+    def is_gauge_equivalent(self, other: "QuantumState3Qubit", tolerance: float = 1e-6) -> bool:
+        """Deprecated name for populations_and_coherence_magnitudes_match (not full gauge)."""
+        return self.populations_and_coherence_magnitudes_match(other, tolerance)
+
 
 
 class TransitionVerifier:

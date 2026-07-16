@@ -1,4 +1,5 @@
-from typing import Tuple, Iterator
+from typing import Tuple, Iterator, Union, Iterable, Any
+
 
 class ScaleAddress:
     """
@@ -11,6 +12,16 @@ class ScaleAddress:
         # Normalize all segments to lowercase and strip whitespace for comparison/hashing
         self.segments = tuple(s.strip().lower() for s in segments)
         self.display_path = "/".join(self._display_segments)
+
+    @classmethod
+    def coerce(cls, value: Union["ScaleAddress", Iterable[str], str, Any]) -> "ScaleAddress":
+        """Accept ScaleAddress, path string, or segment sequence; reject bare misuse later via type checks."""
+        if isinstance(value, ScaleAddress):
+            return value
+        if isinstance(value, str):
+            parts = tuple(p for p in value.split("/") if p)
+            return cls(parts)
+        return cls(tuple(value))
 
     def contains(self, segment: str) -> bool:
         """Enforces case-insensitive containment checking."""

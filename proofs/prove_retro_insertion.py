@@ -2,7 +2,10 @@ from septacrypt_core.dynamics.transition import QuantumState3Qubit, TransitionVe
 from septacrypt_core.ledger.replay import RetroSolver
 
 def run_proof():
-    print("--- Running Phase 5 Proof: Retro Timeline Insertion & Gauge Verification ---\n")
+    print("--- Running Phase 5 Proof: Symbolic Retro Paths & Population Check ---\n")
+    print("Claim: finds Septacrypt-legal symbolic Hamming-1 paths (graph grammar).")
+    print("Not claimed: dynamical realizability under the cumulant substrate.")
+    print("See prove_witnessed_knot.py for physics-gated certificates.\n")
 
     # 1. Verify Q3 Adjacency (Strict Graph constraints)
     # 0b010 (Might) to 0b000 (Holy Dark) -> Hamming distance 1 (Valid)
@@ -12,20 +15,19 @@ def run_proof():
     assert not TransitionVerifier.verify_step(0b010, 0b101), "Allowed physically impossible teleportation!"
     print("[PASS] Q3 Adjacency verifier correctly guards physical transitions.")
 
-    # 2. Verify Gauge-Invariance
-    # Let's create two quantum states with the same population but shifted phases (gauge transform)
-    # State 1: Pure state |010>
+    # 2. Population / coherence-magnitude match (necessary, not full local-gauge equivalence)
     state_1 = QuantumState3Qubit.from_classical_state(0b010)
 
-    # State 2: Same state, with a gauge phase shift applied to the coherent elements
-    # (For pure states, populations remain isolated on the diagonal, preserving gauge-equivalence)
     matrix_gauge_shifted = [[0.0j for _ in range(8)] for _ in range(8)]
-    matrix_gauge_shifted[2][2] = 1.0 + 0.0j # Same population
-    # Add minor relative phase rotations off-diagonal (magnitude remains 0, so gauge is preserved)
+    matrix_gauge_shifted[2][2] = 1.0 + 0.0j
     state_2 = QuantumState3Qubit(matrix_gauge_shifted)
 
-    assert state_1.is_gauge_equivalent(state_2), "Gauge equivalence test failed on phase-shifted state!"
-    print("[PASS] Gauge-invariant comparison successfully filters out phase noise.")
+    assert state_1.populations_and_coherence_magnitudes_match(state_2), (
+        "Population/magnitude match failed on identical pure states!"
+    )
+    print("[PASS] Population + coherence-magnitude check agrees on identical pure states.")
+    print("       (Not a full local-unitary gauge test; see dynamics/transition.py docstring.)")
+
 
     # 3. Test Microscope-Style Retro Insertion
     # Anchor A: Valve is Open (0b010 - Might)
@@ -59,8 +61,9 @@ def run_proof():
         for i in range(len(path) - 1):
             assert TransitionVerifier.verify_step(path[i], path[i+1]), f"Illegal step found in path: {path[i]} -> {path[i+1]}"
 
-    print("\n[PASS] Retroactive solver honors strict graph-physics boundaries.")
-    print("[PASS] Phase 5 Retro Timeline Insertion is mathematically complete.")
+    print("\n[PASS] Symbolic retro solver honors strict Q3 graph boundaries.")
+    print("[PASS] Phase 5 symbolic path grammar is complete (dynamics: witnessed_knot).")
+
 
 if __name__ == "__main__":
     run_proof()

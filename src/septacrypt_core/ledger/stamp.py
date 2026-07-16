@@ -1,26 +1,18 @@
 from dataclasses import dataclass
 from typing import Tuple, Optional, Dict, Any
+
 from ..geometry.address import ScaleAddress
+from ..spirit.vector import SpiritVector
+
 
 @dataclass(frozen=True)
 class EntityRef:
     entity_id: str
     lineage_id: str
     parent_id: Optional[str]
-    scale_path: ScaleAddress  # Upgraded to normalized ScaleAddress
+    scale_path: ScaleAddress
     schema_version: str
 
-@dataclass(frozen=True)
-class SpiritVector:
-    wisdom: float
-    might: float
-    wealth: float
-    power: float
-    glory: float
-    honor: float
-    blessing: float
-    frame_id: str
-    confidence: float
 
 @dataclass(frozen=True)
 class Observation:
@@ -33,6 +25,7 @@ class Observation:
     chronological_time: float
     branch_id: str
 
+
 @dataclass(frozen=True)
 class Intent:
     actor_id: str
@@ -42,8 +35,13 @@ class Intent:
     spirit_gradient: Optional[SpiritVector]
     shadow: bool = True
 
+
 @dataclass(frozen=True)
 class TransitionCertificate:
+    """Witness that a cassette is dynamically realizable between committed anchors.
+
+    pre/post *_root fields hold content hashes of physical payloads (not Merkle trees).
+    """
     dynamics_version: str
     pre_state_root: str
     post_state_root: str
@@ -56,6 +54,7 @@ class TransitionCertificate:
     affected_surface: Tuple[str, ...]
     hidden_conditions: Tuple[str, ...]
 
+
 @dataclass(frozen=True)
 class KnotStamp:
     stamp_id: str
@@ -66,7 +65,7 @@ class KnotStamp:
     observer_id: Optional[str]
     chronological_time: float
     berry_coordinate: Dict[str, Any]
-    scale_address: ScaleAddress  # Upgraded to normalized ScaleAddress
+    scale_address: ScaleAddress
     pre_state_root: str
     post_state_root: str
     transition_certificate_id: str

@@ -5,15 +5,28 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "septacrypt-core"
 version = "0.1.0"
-description = "Fledgeling Septacrypt / Endless Knot Runtime"
+description = "Fledgeling Septacrypt / Endless Knot Runtime — quantum-narrative kernel"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
 authors = [{ name = "Fledgeling Team" }]
+# umwelt-engine: install sibling `pip install -e ../umwelt` (see README / GAME_BUILDER.md).
 dependencies = [
-    "dataclasses; python_version<'3.7'",
-    "umwelt-engine @ file:///home/primearchitect/ws/umwelt",
+    "numpy",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest"]
 
+[project.scripts]
+septacrypt-repl = "septacrypt_core.cli:repl_main"
+septacrypt-demo = "septacrypt_core.cli:demo_main"
+septacrypt-proofs = "septacrypt_core.cli:proofs_main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
