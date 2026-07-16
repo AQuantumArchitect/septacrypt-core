@@ -105,15 +105,18 @@ Soft bridges (params): reactor power → thruster / blower; life-support → sen
 
 ## Render payload (engine contract)
 
-`schema_version`: `fledgeling.render.v1`
+`schema_version`: `fledgeling.render.v2` (v1 payloads are still accepted by the
+validator, but the engine emits v2 — the two-layer epistemology split)
 
 ```json
 {
-  "schema_version": "fledgeling.render.v1",
+  "schema_version": "fledgeling.render.v2",
   "meta": {
     "observer": "player",
     "turn": 3,
     "zone": "Repair_Station",
+    "mode": "reactor",
+    "seed": 7,
     "global_tension": 0.012,
     "current_mythos": {"emoji": "🌟", "name": "The Cosmic Dance", "desc": "..."},
     "q3_mask": 7,
@@ -121,16 +124,30 @@ Soft bridges (params): reactor power → thruster / blower; life-support → sen
     "ledger_head": "stamp_abc...",
     "dynamics_version": "septacrypt.reactor.cumulant.v1+..."
   },
+  "public_world": {
+    "turn": 3,
+    "zone_names": ["Repair_Station"],
+    "active_zone": "Repair_Station",
+    "topology_version": "..."
+  },
+  "observer_view": { "...belief-derived coordinates, mask, mythos, reports..." },
   "entities": {
     "valve_17": {
       "raw_metrics": {"z_axis": 0.9, "radius": 0.95, "phase_x": 0.1, "phase_y": 0.0},
-      "semantic": {"inferred_state": "active", "view": "ground"}
+      "semantic": {"inferred_state": "active", "view": "belief"}
     }
   },
   "narrative_log": ["..."],
-  "zones": null
+  "zones": null,
+  "ground_debug": null
 }
 ```
+
+With `private_observers=True` (the default) `entities` mirrors
+`observer_view.entities` — belief, not ground. Ground truth appears only in
+`ground_debug` and only when `include_ground_debug=True`. The full field-by-
+field doc is `septacrypt_core.api.schema.RENDER_STATE_DOC` (also served at
+`GET /v1/schema` by the septacrypt-fledgling HTTP host).
 
 **Shader mapping suggestions**
 

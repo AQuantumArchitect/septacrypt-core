@@ -39,7 +39,7 @@ GameSession  (handoff surface)
     ├── umwelt CumulantCluster dynamics
     ├── LOOK / WAIT / STIR actions
     ├── Knot Ledger + TransitionCertificates
-    └── JSON render payload (fledgeling.render.v1)
+    └── JSON render payload (fledgeling.render.v2)
 ```
 
 | Layer | Role |
