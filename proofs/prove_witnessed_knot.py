@@ -274,7 +274,12 @@ def run_proof():
         for ev in plan:
             if ev.kind == "measure":
                 z = 1.0 if search_rng.random() < 0.5 else -1.0
-                ev = measure_event(ev.parameters["role"], z, ev.parameters.get("strength", 1.0))
+                ev = measure_event(
+                    ev.parameters["role"],
+                    z,
+                    strength=float(ev.parameters.get("strength", 1.0)),
+                )
+
             apply_event(c2, ev)
             berry2.observe_after(c2, ev)
             built.append(ev)

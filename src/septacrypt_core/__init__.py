@@ -1,16 +1,16 @@
 """
 septacrypt-core — Fledgeling / Endless Knot quantum-narrative kernel.
 
-Primary handoff for game builders
----------------------------------
+Primary handoff
+---------------
     from septacrypt_core import GameSession
 
     game = GameSession(mode="reactor", seed=42)
     game.wait()
     game.look("player", "valve_17")
-    frame = game.status("player")   # JSON-friendly render payload
+    frame = game.status("player")
 
-See GAME_BUILDER.md for the full surface.
+See GAME_BUILDER.md.
 """
 
 from .api.schema import RENDER_SCHEMA_VERSION, validate_render_state
@@ -29,14 +29,17 @@ from .scenario.campaign import CampaignManager
 from .scenario.manifold_ship import build_ship_manifold
 from .scenario.reactor import build_entangled_reactor
 from .spirit.vector import SpiritVector
+from .world.transaction import CertifiedTransaction, TransactionError
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "GameSession",
     "FledgelingKernelAPI",
     "CampaignManager",
     "KnotLedger",
+    "CertifiedTransaction",
+    "TransactionError",
     "LoreLexicon",
     "EndlessKnotWeaver",
     "SpiritVector",

@@ -143,16 +143,23 @@ Validate: `validate_render_state(payload)` or `game.validate_payload()`.
 
 ---
 
-## Private observers
+## Private observers (no telepathy)
 
 ```python
-game = GameSession(private_observers=True, seed=1)
-game.look("keith", "valve_17")
-keith = game.status("keith")      # full snap of ground after his LOOK
-dwayne = game.status("dwayne")    # lagged rumor (partial sync)
+game = GameSession(private_observers=True, seed=1)  # default
+game.look("keith", "valve_17")     # updates keith's belief only
+game.report("keith", "dwayne", "valve_17", confidence=0.35)
+keith = game.status("keith")       # observer_view from keith's beliefs
+dwayne = game.status("dwayne")     # dwayne unchanged until report
 ```
 
-Ground is still authoritative. Private fields are belief overlays for dialogue / UI fog-of-war — not separate quantum universes yet.
+Payload layers:
+
+- `public_world` — turn, zone names (intentionally public)
+- `observer_view` / `entities` — belief-derived mask, mythos, coordinates
+- `ground_debug` — only if `include_ground_debug=True` (admin)
+
+Beliefs are a **first-moment e1 approximation**, not a complete private umwelt.
 
 ---
 

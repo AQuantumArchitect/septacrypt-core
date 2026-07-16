@@ -53,10 +53,22 @@ GameSession  (handoff surface)
 
 ## Honest claims
 
-- **Witnessed histories:** stamps require real cumulant replay between anchors  
+- **Witnessed histories:** stamps require real cumulant / **composite world** replay between anchors  
+- **Fail-closed ledger:** certified mode rejects and rolls back; no silent re-anchor on failure  
+- **World step ≠ UI zone:** every WAIT evolves **all** zones, then bridges; active zone is presentation only  
+- **Observer safety:** player-facing status uses belief-derived mythos/mask; ground is `ground_debug` only  
 - **Symbolic weave:** Q3 Hamming paths for story only  
 - **State commitment:** content hash (not Merkle tree yet)  
 - **Ship bridges:** soft cross-zone coupling, not one joint 9-qubit H  
+- **Autonomy:** routines start shadow / not auto-live until explicit promotion  
+
+### Migration note (0.1.1)
+
+- Render schema `fledgeling.render.v2` adds `public_world` + `observer_view`.  
+- `private_observers=True` by default.  
+- `LOOK` no longer auto-rumors other observers; use `game.report(...)`.  
+- `STIR` is a typed field cassette, not an out-of-band `_h` poke.  
+
 
 ## License
 
