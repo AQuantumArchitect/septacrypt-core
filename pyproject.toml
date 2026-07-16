@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "septacrypt-core"
+version = "0.1.0"
+description = "Fledgeling Septacrypt / Endless Knot Runtime"
+authors = [{ name = "Fledgeling Team" }]
+dependencies = [
+    "dataclasses; python_version<'3.7'",
+    "umwelt-engine @ file:///home/primearchitect/ws/umwelt",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
