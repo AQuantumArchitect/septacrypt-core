@@ -53,6 +53,9 @@ class CertifiedTransaction:
             # empty cassette only for explicit init/reanchor
             pass
 
+        if not (require_certificate and ledger is not None):
+            return _execute_uncertified(world, cassette)
+
         pre_snap = world.snapshot()
         pre_hash = world_hash(pre_snap)
 
@@ -169,6 +172,41 @@ class CertifiedTransaction:
             cassette=cassette,
             residual=residual,
         )
+
+
+def _execute_uncertified(world: World, cassette: Cassette) -> CertifiedCommit:
+    """Fast path when no certificate/ledger is requested: apply the cassette
+    in place on the live world instead of clone → apply → double-restore →
+    re-apply. Semantics are kept bit-identical to the legacy commit path:
+
+    - Berry journeys are re-seeded at pre before applying (exactly what the
+      legacy path's restore(pre) did on the live world before its re-apply),
+      so physics hashes match the certified path for the same seed/verbs.
+    - Fail-closed: on any apply failure the world (zones, rng, turn, AND the
+      original evolved berry-journey objects) is restored to its pre state,
+      so callers' `physics_hash() == pre_hash` assertion holds.
+
+    No world_hash is computed here — content hashing is the certified path's
+    cost, not the fast path's.
+    """
+    pre_snap = world.snapshot()
+    saved_berry = dict(world.berry)
+    world.reseed_berry()
+    try:
+        world.apply_cassette(cassette)
+        world.advance_turn()
+    except Exception as e:
+        world.restore(pre_snap)
+        world.berry = saved_berry
+        raise TransactionError(f"apply failed: {e}") from e
+    return CertifiedCommit(
+        stamp_id=None,
+        certificate=None,
+        pre_hash="",
+        post_hash="",
+        cassette=cassette,
+        residual=0.0,
+    )
 
 
 def _composite_berry(snap: WorldSnapshot) -> Dict[str, Any]:

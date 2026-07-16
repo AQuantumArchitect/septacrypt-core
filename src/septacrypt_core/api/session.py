@@ -6,6 +6,7 @@ NarrativeProjector, CampaignController. Do not put new cosmology here.
 """
 from __future__ import annotations
 
+import random
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -31,6 +32,7 @@ from ..scenario.params import (
     DEFAULT_ATTENTION,
     LOOK_ATTENTION_COST,
     STIR_DT_SCALE,
+    STIR_H_MAX,
     STIR_STEPS,
     STIR_TRANSVERSE,
 )
@@ -250,11 +252,14 @@ class GameSession:
             self.narrative.append("[FOG] Not enough attention to pierce the aether.")
             return self.status(observer_id)
 
-        # Sample outcome without permanently advancing live RNG until commit
-        probe = self.world.clone()
-        z_before = float(probe.zones[zname].role_bloch(target_role)[2])
+        # Sample outcome without permanently advancing live RNG until commit.
+        # role_bloch is a pure read on the live cluster; only the RNG state
+        # needs isolating, so copy that instead of cloning the whole world.
+        probe_rng = random.Random()
+        probe_rng.setstate(self.world.rng.getstate())
+        z_before = float(cluster.role_bloch(target_role)[2])
         p_plus = (z_before + 1.0) / 2.0
-        u = probe.rng.random()
+        u = probe_rng.random()
         outcome = 1.0 if u < p_plus else -1.0
 
         ev = measure_event(
@@ -301,15 +306,21 @@ class GameSession:
         events = []
         for zname, cluster in self.world.zones.items():
             h = np.array(cluster._h, dtype=float).tolist()
-            # Record intended new fields from probe RNG without mutating live
-            probe = self.world.clone()
+            # Record intended new fields from probe RNG without mutating live.
+            # NOTE: probe RNG is reset from live state per zone (preserving the
+            # legacy per-zone world.clone() behavior exactly — every zone sees
+            # the same draw sequence), so recorded fields stay hash-compatible.
+            probe_rng = random.Random()
+            probe_rng.setstate(self.world.rng.getstate())
             h_new = []
             draws = []
             for i, row in enumerate(h):
-                u = probe.rng.random()
+                u = probe_rng.random()
                 draws.append(u)
                 row = list(row)
-                row[0] = float(row[0]) + STIR_TRANSVERSE * (0.5 + u)
+                # Cap accumulated transverse field: unbounded growth over many
+                # STIRs drives RK4 unstable (see STIR_H_MAX in params).
+                row[0] = min(float(row[0]) + STIR_TRANSVERSE * (0.5 + u), STIR_H_MAX)
                 h_new.append(row)
             # Use same draws on live via set_fields (no rng in set_fields) —
             # fields fully recorded

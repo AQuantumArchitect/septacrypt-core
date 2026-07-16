@@ -5,6 +5,8 @@ import random
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+import numpy as np
+
 from ..dynamics.version import DYNAMICS_VERSION, TOPOLOGY_REACTOR, TOPOLOGY_SHIP
 from ..geometry.berry import BerryJourney
 from ..ledger.events import Cassette, KnotEvent
@@ -172,6 +174,10 @@ class World:
         if snap.active_zone in self.zones:
             self.active_zone = snap.active_zone
         # Re-seed berry journeys from restored clusters (path history not fully restored)
+        self.reseed_berry()
+
+    def reseed_berry(self) -> None:
+        """Re-seed berry journeys from current clusters (restore() semantics)."""
         for name, cluster in self.zones.items():
             bj = BerryJourney()
             bj.seed(cluster)
@@ -288,6 +294,17 @@ class World:
     def apply_cassette(self, cassette: Cassette) -> None:
         for event in cassette:
             self.apply_event(event)
+        self._check_finite()
+
+    def _check_finite(self) -> None:
+        """Non-finite substrate state must never commit: an overflowed RK4
+        step returns inf/NaN without raising, and a world that carries those
+        values is bricked (every later evolve/measure fails or lies). Both
+        transaction paths route through apply_cassette, so one check here
+        turns silent corruption into a fail-closed rollback."""
+        for name, cluster in self.zones.items():
+            if not (np.all(np.isfinite(cluster.e1)) and np.all(np.isfinite(cluster.e2))):
+                raise ValueError(f"non-finite substrate state in zone {name!r}")
 
     def advance_turn(self) -> None:
         self.turn += 1

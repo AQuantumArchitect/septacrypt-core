@@ -56,6 +56,10 @@ DEFAULT_QUESTS: List[Tuple[str, int]] = [
 STIR_TRANSVERSE: float = 0.25
 STIR_DT_SCALE: float = 1.0
 STIR_STEPS: int = 1
+# Repeated STIRs accumulate on h[0]; uncapped they grow without bound and
+# RK4 at dt=0.1 blows up (observed in play: ship seed 52, 58 stirs → h≈11.8,
+# e1=inf). 2.0 keeps a wide stability margin while leaving STIR meaningful.
+STIR_H_MAX: float = 2.0
 
 # Bot heuristics
 GREEDY_TENSION_THRESHOLD: float = 0.01
