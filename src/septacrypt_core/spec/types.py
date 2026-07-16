@@ -27,6 +27,10 @@ class ZoneSpec:
     zz: Tuple[ZZItem, ...]
     gamma: float
     dt: float
+    # Optional initial Bloch vector (x, y, z) per role at construction only;
+    # None keeps the substrate default (ground pole). Never consulted on
+    # clone/restore — snapshots always win.
+    init_bloch: Optional[Tuple[Tuple[float, float, float], ...]] = None
 
 
 @dataclass(frozen=True)
@@ -81,6 +85,18 @@ class WorldSpec:
             for (i, j), _v in z.zz:
                 if not (0 <= i < n and 0 <= j < n and i != j):
                     errors.append(f"zone {z.name!r}: zz index ({i},{j}) out of range")
+            if z.init_bloch is not None:
+                if len(z.init_bloch) != n:
+                    errors.append(f"zone {z.name!r}: init_bloch must have one row per role")
+                for row in z.init_bloch:
+                    if len(row) != 3:
+                        errors.append(f"zone {z.name!r}: init_bloch rows must be (x, y, z)")
+                        break
+                    if sum(c * c for c in row) > 1.0 + 1e-9:
+                        errors.append(
+                            f"zone {z.name!r}: init_bloch row {row} outside the Bloch ball"
+                        )
+                        break
             if z.gamma < 0:
                 errors.append(f"zone {z.name!r}: gamma must be >= 0")
             if z.dt <= 0:

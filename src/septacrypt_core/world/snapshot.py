@@ -158,6 +158,11 @@ class World:
                 h_fields=[list(row) for row in z.h_fields],
                 zz={(i, j): v for (i, j), v in z.zz},
             )
+            init_bloch = getattr(z, "init_bloch", None)
+            if init_bloch is not None:
+                # Construction-time only: clone()/restore() overwrite via snapshot.
+                for i, row in enumerate(init_bloch):
+                    cluster.e1[i] = np.asarray(row, dtype=float)
             zones[z.name] = cluster
         if bridges_enabled is None:
             bridges_enabled = bool(spec.bridges)
